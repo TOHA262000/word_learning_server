@@ -37,6 +37,18 @@ async function run() {
       }
     });
 
+    // GET word by ID
+    app.get('/words/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const word = await wordsCollection.findOne({ _id: new ObjectId(id) });
+        if (!word) return res.status(404).json({ error: "Word not found" });
+        res.json(word);
+      } catch (err) {
+        res.status(500).json({ error: "Failed to fetch word", details: err.message });
+      }
+    });
+
     // POST a new word
     app.post('/words', async (req, res) => {
       try {
@@ -51,7 +63,27 @@ async function run() {
       }
     });
 
-    // DELETE a word by ID
+    // PUT /words/:id (replace word)
+    app.put('/words/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+        const replacementWord = { ...req.body };
+        delete replacementWord._id;
+
+        const result = await wordsCollection.findOneAndReplace(
+          { _id: new ObjectId(id) },
+          replacementWord,
+          { returnDocument: 'after' }
+        );
+
+        if (!result.value) return res.status(404).json({ message: "No matching word found" });
+        res.json(result.value);
+      } catch (err) {
+        res.status(500).json({ error: "Failed to replace word", details: err.message });
+      }
+    });
+
+    // DELETE /words/:id
     app.delete('/words/:id', async (req, res) => {
       try {
         const id = req.params.id;
@@ -63,27 +95,7 @@ async function run() {
       }
     });
 
-    // PUT /words/:id (replace word)
-    app.put('/words/:id', async (req, res) => {
-      try {
-        const { id } = req.params;
-        const replacementWord = { ...req.body };
-        delete replacementWord._id;
-
-        const result = await wordsCollection.findOneAndReplace(
-          { _id: new ObjectId(id) },
-          replacementWord,
-          { returnDocument: 'after' } // For MongoDB driver v4+
-        );
-
-        if (!result.value) return res.status(404).json({ message: "No matching word found" });
-        res.json(result.value);
-      } catch (err) {
-        res.status(500).json({ error: "Failed to replace word", details: err.message });
-      }
-    });
-
-    // Start Express server after MongoDB connection
+    // Start the server
     app.listen(port, () => {
       console.log(`Word learning server running on port ${port}`);
     });
