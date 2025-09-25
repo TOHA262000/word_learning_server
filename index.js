@@ -97,10 +97,3 @@ async function run() {
 }
 
 run().catch(err => console.log(err));
-
-
-app.listen(port, () => {
-    console.log(`Word learning server running on ${port}`)
-});
-
-//Add some comment//
