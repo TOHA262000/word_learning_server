@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
@@ -10,15 +11,21 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// MongoDB URI
+// MongoDB URI (Atlas)
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.yapm2yx.mongodb.net/word_learning?retryWrites=true&w=majority`;
-const client = new MongoClient(uri);
+
+// Ensure TLS 1.2+ for Atlas
+const client = new MongoClient(uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  tls: true, // important for Atlas
+});
 
 async function run() {
   try {
     // Connect to MongoDB
     await client.connect();
-    console.log("Connected to MongoDB");
+    console.log("Connected to MongoDB successfully");
 
     const wordsCollection = client.db("word_learning").collection("words");
 
@@ -37,7 +44,7 @@ async function run() {
       }
     });
 
-    // GET word by ID
+    // GET a word by ID
     app.get('/words/:id', async (req, res) => {
       try {
         const id = req.params.id;
@@ -52,21 +59,20 @@ async function run() {
     // POST a new word
     app.post('/words', async (req, res) => {
       try {
-        const newWord = req.body;
-        if (!newWord.word || !newWord.meaning) {
-          return res.status(400).json({ error: "Word and meaning are required" });
-        }
-        const result = await wordsCollection.insertOne(newWord);
-        res.json({ ...newWord, _id: result.insertedId });
+        const { word, meaning } = req.body;
+        if (!word || !meaning) return res.status(400).json({ error: "Word and meaning are required" });
+
+        const result = await wordsCollection.insertOne({ word, meaning });
+        res.json({ _id: result.insertedId, word, meaning });
       } catch (err) {
         res.status(500).json({ error: "Failed to add word", details: err.message });
       }
     });
 
-    // PUT /words/:id (replace word)
+    // PUT (replace) a word
     app.put('/words/:id', async (req, res) => {
       try {
-        const { id } = req.params;
+        const id = req.params.id;
         const replacementWord = { ...req.body };
         delete replacementWord._id;
 
@@ -76,14 +82,14 @@ async function run() {
           { returnDocument: 'after' }
         );
 
-        if (!result.value) return res.status(404).json({ message: "No matching word found" });
+        if (!result.value) return res.status(404).json({ error: "Word not found" });
         res.json(result.value);
       } catch (err) {
-        res.status(500).json({ error: "Failed to replace word", details: err.message });
+        res.status(500).json({ error: "Failed to update word", details: err.message });
       }
     });
 
-    // DELETE /words/:id
+    // DELETE a word
     app.delete('/words/:id', async (req, res) => {
       try {
         const id = req.params.id;
@@ -95,14 +101,15 @@ async function run() {
       }
     });
 
-    // Start the server
+    // Start server
     app.listen(port, () => {
       console.log(`Word learning server running on port ${port}`);
     });
 
   } catch (err) {
-    console.error("MongoDB connection failed", err);
+    console.error("MongoDB connection failed:", err);
   }
 }
 
+// Run the server
 run().catch(err => console.error(err));
