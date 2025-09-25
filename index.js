@@ -18,8 +18,6 @@ app.get('/', (req, res) => {
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.yapm2yx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
-
-
 async function run() {
     try {
         const userCollection = client.db("word_learning").collection("words");
@@ -57,10 +55,7 @@ async function run() {
                 res.status(500).send({ error: "Failed to delete word" });
             }
         });
-
-        // Replace a word info by ID
-       
-
+        // Replace a word info by ID     
         app.put('/words/:id', async (req, res) => {
             const { id } = req.params;
             const replacementWord = { ...req.body };
@@ -95,5 +90,4 @@ async function run() {
 
     }
 }
-
 run().catch(err => console.log(err));
