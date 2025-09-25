@@ -10,13 +10,16 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.yapm2yx.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+// MongoDB URI
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.yapm2yx.mongodb.net/word_learning?retryWrites=true&w=majority`;
+const client = new MongoClient(uri);
 
 async function run() {
   try {
     // Connect to MongoDB
     await client.connect();
+    console.log("Connected to MongoDB");
+
     const wordsCollection = client.db("word_learning").collection("words");
 
     // Root route
@@ -38,6 +41,9 @@ async function run() {
     app.post('/words', async (req, res) => {
       try {
         const newWord = req.body;
+        if (!newWord.word || !newWord.meaning) {
+          return res.status(400).json({ error: "Word and meaning are required" });
+        }
         const result = await wordsCollection.insertOne(newWord);
         res.json({ ...newWord, _id: result.insertedId });
       } catch (err) {
@@ -57,7 +63,7 @@ async function run() {
       }
     });
 
-    // PUT /words/:id
+    // PUT /words/:id (replace word)
     app.put('/words/:id', async (req, res) => {
       try {
         const { id } = req.params;
@@ -67,7 +73,7 @@ async function run() {
         const result = await wordsCollection.findOneAndReplace(
           { _id: new ObjectId(id) },
           replacementWord,
-          { returnDocument: 'after' }
+          { returnDocument: 'after' } // For MongoDB driver v4+
         );
 
         if (!result.value) return res.status(404).json({ message: "No matching word found" });
@@ -77,15 +83,14 @@ async function run() {
       }
     });
 
+    // Start Express server after MongoDB connection
+    app.listen(port, () => {
+      console.log(`Word learning server running on port ${port}`);
+    });
+
   } catch (err) {
     console.error("MongoDB connection failed", err);
   }
 }
 
-// Run the server
 run().catch(err => console.error(err));
-
-// Start Express server
-app.listen(port, () => {
-  console.log(`Word learning server running on port ${port}`);
-});
