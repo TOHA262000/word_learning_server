@@ -12,7 +12,8 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB URI (Atlas)
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.yapm2yx.mongodb.net/word_learning?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.yapm2yx.mongodb.net/word_learning?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true`;
+
 
 // Ensure TLS 1.2+ for Atlas
 const client = new MongoClient(uri, {
